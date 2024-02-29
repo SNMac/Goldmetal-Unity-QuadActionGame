@@ -17,6 +17,7 @@ public class Player : MonoBehaviour
     public int ammo;
     public int coin;
     public int health;
+    public int score;
 
     public int maxAmmo;
     public int maxCoin;
@@ -31,10 +32,11 @@ public class Player : MonoBehaviour
     bool fDown;
     bool gDown;
     bool rDown;
-    bool iDown;
     bool sDown1;
     bool sDown2;
     bool sDown3;
+    bool iDown;
+    bool eDown;
 
     bool isJump;
     bool isDodge;
@@ -53,7 +55,7 @@ public class Player : MonoBehaviour
     MeshRenderer[] meshs;
 
     GameObject nearObject;
-    Weapon equipWeapon;
+    public Weapon equipWeapon;
     int equipWeaponIndex = -1;
     float fireDelay;
 
@@ -62,6 +64,8 @@ public class Player : MonoBehaviour
         rigid = GetComponent<Rigidbody>();
         anim = GetComponentInChildren<Animator>();
         meshs = GetComponentsInChildren<MeshRenderer>();
+
+        PlayerPrefs.SetInt("MaxScore", 112500);
     }
 
     // Update is called once per frame
@@ -77,6 +81,7 @@ public class Player : MonoBehaviour
         Dodge();
         Swap();
         Interaction();
+        Escape();
     }
 
     void GetInput()
@@ -92,6 +97,7 @@ public class Player : MonoBehaviour
         sDown2 = Input.GetButtonDown("Swap2");
         sDown3 = Input.GetButtonDown("Swap3");
         iDown = Input.GetButtonDown("Interaction");
+        eDown = Input.GetButtonDown("Cancel");
     }
 
     void Move()
@@ -194,9 +200,15 @@ public class Player : MonoBehaviour
 
     void ReloadOut()
     {
-        int reAmmo = ammo < equipWeapon.maxAmmo ? ammo : equipWeapon.maxAmmo;
-        equipWeapon.curAmmo = reAmmo;
-        ammo -= reAmmo;
+        int reloadAmmo;
+        if (ammo < equipWeapon.maxAmmo - equipWeapon.curAmmo) {
+            reloadAmmo = ammo;
+        } else {
+            reloadAmmo = equipWeapon.maxAmmo - equipWeapon.curAmmo;
+        }
+        equipWeapon.curAmmo += reloadAmmo;
+        ammo -= reloadAmmo;
+
         isReload = false;
     }
 
@@ -266,6 +278,17 @@ public class Player : MonoBehaviour
                 Shop shop = nearObject.GetComponent<Shop>();
                 shop.Enter(this);
                 isShop = true;
+            }
+        }
+    }
+
+    void Escape()
+    {
+        if (eDown && nearObject != null) {
+            if (nearObject.tag == "Shop") {
+                Shop shop = nearObject.GetComponent<Shop>();
+                shop.Exit();
+                isShop = false;
             }
         }
     }
