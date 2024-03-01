@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using Random = UnityEngine.Random;
 
 public class Enemy : MonoBehaviour
 {
@@ -16,9 +17,12 @@ public class Enemy : MonoBehaviour
     public Type enemyType;
     public int maxHealth;
     public int curHealth;
+    public int score;
+    public GameManager manager;
     public Transform target;
     public BoxCollider meleeArea;
     public GameObject bullet;
+    public GameObject[] coins;
     public bool isChase;
     public bool isAttack;
     public bool isDead;
@@ -28,6 +32,8 @@ public class Enemy : MonoBehaviour
     protected MeshRenderer[] meshs;
     protected NavMeshAgent nav;
     protected Animator anim;
+
+    bool isDamaged;
 
     void Awake()
     {
@@ -148,7 +154,7 @@ public class Enemy : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.tag == "Melee") {
+        if (other.tag == "Melee" && !isDamaged) {
             Weapon weapon = other.GetComponent<Weapon>();
             curHealth -= weapon.damage;
             Vector3 reactVec = transform.position - other.transform.position;
@@ -171,37 +177,64 @@ public class Enemy : MonoBehaviour
 
     IEnumerator OnDamage(Vector3 reactVec, bool isGrenade)
     {
-        foreach (MeshRenderer mesh in meshs)
-            mesh.material.color = Color.red;
-        yield return new WaitForSeconds(0.1f);
+
 
         if (curHealth > 0) {
+            isDamaged = true;
+            foreach (MeshRenderer mesh in meshs)
+                mesh.material.color = Color.red;
+            yield return new WaitForSeconds(0.1f);
+            isDamaged = false;
+
             foreach (MeshRenderer mesh in meshs)
                 mesh.material.color = Color.white;
         } else {
-            foreach (MeshRenderer mesh in meshs)
-                mesh.material.color = Color.gray;
-            gameObject.layer = 14;
-            isDead = true;
-            isChase = false;
-            nav.enabled = false;
-            anim.SetTrigger("doDie");
+            if (!isDead) {
+                foreach (MeshRenderer mesh in meshs)
+                    mesh.material.color = Color.gray;
+                gameObject.layer = 14;
+                isDead = true;
+                isChase = false;
+                nav.enabled = false;
+                anim.SetTrigger("doDie");
+                Player player = target.GetComponent<Player>();
+                player.score += score;
+                int ranCoin = Random.Range(0, 3);
+                Instantiate(coins[ranCoin], transform.position, Quaternion.identity);
 
-            if (isGrenade) {
-                reactVec = reactVec.normalized;
-                reactVec += Vector3.up * 3;
+                switch (enemyType) {
+                    case Type.A :
+                        manager.enemyCntA--;
+                        break;
 
-                rigid.freezeRotation = false;
-                rigid.AddForce(reactVec * 5, ForceMode.Impulse);
-                rigid.AddTorque(reactVec * 15, ForceMode.Impulse);
-            } else {
-                reactVec = reactVec.normalized;
-                reactVec += Vector3.up;
-                rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+                    case Type.B :
+                        manager.enemyCntB--;
+                        break;
+
+                    case Type.C :
+                        manager.enemyCntC--;
+                        break;
+
+                    case Type.D :
+                        manager.enemyCntD--;
+                        break;
+                }
+
+                if (isGrenade) {
+                    reactVec = reactVec.normalized;
+                    reactVec += Vector3.up * 3;
+
+                    rigid.freezeRotation = false;
+                    rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+                    rigid.AddTorque(reactVec * 15, ForceMode.Impulse);
+                } else {
+                    reactVec = reactVec.normalized;
+                    reactVec += Vector3.up;
+                    rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+                }
+
+                Destroy(gameObject, 3);
             }
-
-            if (enemyType != Type.D)
-                Destroy(gameObject, 4);
         }
     }
 }
